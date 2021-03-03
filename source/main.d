@@ -7,8 +7,22 @@ import std.exception;
 import std.conv;
 import std.string;
 
+// Vulkan
 import erupted;
-import derelict.glfw3;
+
+// GLFW
+import bindbc.glfw;
+
+/*
+  Declare the following Vulkan specific GLFW function pointers:
+  - glfwGetRequiredInstanceExtensions
+  - glfwGetInstanceProcAddress
+  - glfwGetPhysicalDevicePresentationSupport
+  - glfwCreateWindowSurface
+  Also declare the function loadGLFW_Vulkan() to load these functions from the GLFW library.
+  A Vulkan library (like erupted) must already be imported before this mixin!
+*/
+mixin(bindGLFW_Vulkan);
 
 
 private void enforceVK(VkResult res) {
@@ -21,18 +35,14 @@ extern( C ) void key_callback( GLFWwindow * window, int key, int scancode, int v
 	}
 }
 
-// this template brings vulkan support function definitions into current scope
-// hence these functions can be used with erupted vulkan types
-mixin DerelictGLFW3_VulkanBind;
-
-
 int main() {
 
-	// load GLFW3 functions 
-	DerelictGLFW3.load;
+	// load GLFW functions 
+	import loader = bindbc.loader.sharedlib;
+	GLFWSupport ret = loadGLFW();
 
-	// load GLFW3 vulkan support functions into current scope
-	DerelictGLFW3_loadVulkan();
+	// load GLFW vulkan support functions
+	enforce(loadGLFW_Vulkan(), "loadGLFW_Vulkan(): error loading Vulkan specific Glfw functions.");
 
 	// initialize glfw
 	glfwInit();
@@ -47,7 +57,6 @@ int main() {
 	glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
 	GLFWwindow* window = glfwCreateWindow( 720, 480, "GLFW3 Vulkan Erupted", null, null );
 	glfwSetKeyCallback( window, &key_callback );
-	//glfwMakeContextCurrent( window );
 
 	// load global level functions with glfw
 	loadGlobalLevelFunctions( cast( typeof( vkGetInstanceProcAddr ))
@@ -56,7 +65,7 @@ int main() {
 	// prepare VkInstance creation
 	VkApplicationInfo appInfo = {
 		pApplicationName: "Vulkan Test with GLFW3",
-		apiVersion: VK_MAKE_VERSION( 1, 0, 3 ),
+		apiVersion: VK_MAKE_VERSION( 1, 0, 0 ),
 	};
 	
 	// get the extensions required for for a glfw window with vulkan surface
